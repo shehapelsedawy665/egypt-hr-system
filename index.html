@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Egyptian HR System 2026</title>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">نظام إدارة المرتبات - مصر 2026</h1>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <input id="empName" type="text" placeholder="اسم الموظف" class="border p-2 rounded">
+            <input id="grossSalary" type="number" placeholder="إجمالي الراتب (Gross)" class="border p-2 rounded">
+            <button onclick="calculate()" class="col-span-2 bg-blue-500 text-white p-3 rounded hover:bg-blue-700">إضافة وحساب المرتب</button>
+        </div>
+
+        <table class="w-full text-right border-collapse">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-2 border">الموظف</th>
+                    <th class="p-2 border">الشامل</th>
+                    <th class="p-2 border">تأمينات (11%)</th>
+                    <th class="p-2 border">ضرائب (قانون 2024)</th>
+                    <th class="p-2 border">الصافي (Net)</th>
+                </tr>
+            </thead>
+            <tbody id="results"></tbody>
+        </table>
+    </div>
+
+    <script>
+        function calculate() {
+            const name = document.getElementById('empName').value;
+            const gross = parseFloat(document.getElementById('grossSalary').value);
+            
+            if(!name || !gross) return alert("دخل البيانات يا فنان");
+
+            // 1. Social Insurance (Logic based on 2026 limits)
+            const maxIns = 16700;
+            const insBase = Math.min(gross, maxIns);
+            const insurance = insBase * 0.11;
+
+            // 2. Tax Calculation (Simplified Engine)
+            let taxable = (gross - insurance) * 12 - 20000; // Annual after personal exemption
+            let tax = 0;
+            if(taxable > 40000) tax += (Math.min(taxable, 55000) - 40000) * 0.10;
+            if(taxable > 55000) tax += (Math.min(taxable, 70000) - 55000) * 0.15;
+            if(taxable > 70000) tax += (Math.min(taxable, 200000) - 70000) * 0.20;
+            // ... (rest of slabs)
+            
+            const monthlyTax = Math.max(0, tax / 12);
+            const net = gross - insurance - monthlyTax;
+
+            const row = `<tr>
+                <td class="p-2 border">${name}</td>
+                <td class="p-2 border">${gross.toLocaleString()} ج.م</td>
+                <td class="p-2 border text-red-500">${insurance.toFixed(2)}</td>
+                <td class="p-2 border text-red-500">${monthlyTax.toFixed(2)}</td>
+                <td class="p-2 border font-bold text-green-600">${net.toFixed(2)}</td>
+            </tr>`;
+            
+            document.getElementById('results').innerHTML += row;
+        }
+    </script>
+</body>
+</html>
