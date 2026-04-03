@@ -4,113 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>نظام HR مصر 2026 | المحرك المطور</title>
+    <title>Advanced Egyptian HR System</title>
 </head>
-<body class="bg-slate-50 p-4 md:p-10">
-    <div class="max-w-5xl mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
-        <header class="text-center mb-10">
-            <h1 class="text-3xl font-extrabold text-slate-800">نظام إدارة الرواتب المطور</h1>
-            <p class="text-slate-500 mt-2">مطابق لقانون الضرائب 7 لعام 2024 وتأمينات 2026</p>
-        </header>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
+        <h1 class="text-2xl font-bold text-center text-blue-800 mb-8">نظام حساب الضرائب المعتمد (Excel Logic)</h1>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 bg-slate-100 p-6 rounded-xl">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-blue-50 p-6 rounded-xl border border-blue-100">
             <div>
-                <label class="block text-sm font-bold mb-2">اسم الموظف</label>
-                <input id="empName" type="text" placeholder="مثال: أحمد محمد" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <label class="block text-xs font-bold mb-1">الاسم</label>
+                <input id="empName" type="text" class="w-full border p-2 rounded">
             </div>
             <div>
-                <label class="block text-sm font-bold mb-2">الراتب الشامل (Gross)</label>
-                <input id="grossSalary" type="number" placeholder="ادخل المبلغ بالجنيه" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <label class="block text-xs font-bold mb-1">الراتب الشامل (S7)</label>
+                <input id="gross" type="number" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">أيام العمل الحالية (Actual Days)</label>
+                <input id="currentDays" type="number" value="30" class="w-full border p-2 rounded">
             </div>
             <div class="flex items-end">
-                <button onclick="processPayroll()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md">
-                    حساب وإضافة للجدول
-                </button>
+                <button onclick="calculate()" class="w-full bg-blue-600 text-white font-bold p-2 rounded hover:bg-blue-800 transition">إضافة وحساب</button>
             </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-right">
-                <thead>
-                    <tr class="text-slate-600 border-b-2 border-slate-200">
-                        <th class="p-4">الموظف</th>
-                        <th class="p-4">الشامل</th>
-                        <th class="p-4 text-red-600">تأمينات (11%)</th>
-                        <th class="p-4 text-red-600">ص. الشهداء</th>
-                        <th class="p-4 text-red-600">ضرائب الدخل</th>
-                        <th class="p-4 text-green-700">صافي الراتب</th>
+            <table class="w-full text-center border-collapse">
+                <thead class="bg-blue-800 text-white text-sm">
+                    <tr>
+                        <th class="p-3 border">الموظف</th>
+                        <th class="p-3 border">Gross</th>
+                        <th class="p-3 border">تأمينات (11%)</th>
+                        <th class="p-3 border">Taxpool (Annual)</th>
+                        <th class="p-3 border">ص. الشهداء</th>
+                        <th class="p-3 border">ضريبة الشهر</th>
+                        <th class="p-3 border font-bold bg-green-700 text-white">Net Salary</th>
                     </tr>
                 </thead>
-                <tbody id="payrollBody" class="divide-y divide-slate-100">
-                    </tbody>
+                <tbody id="resultsTable" class="text-sm"></tbody>
             </table>
         </div>
     </div>
 
-    <script>
-        function calculateTaxes(taxableAnnual) {
-            if (taxableAnnual <= 0) return 0;
-            let tax = 0;
-            // شرائح قانون 2024 (للدخول حتى 600 ألف)
-            const slabs = [
-                { limit: 40000, rate: 0 },
-                { limit: 15000, rate: 0.10 },
-                { limit: 15000, rate: 0.15 },
-                { limit: 130000, rate: 0.20 },
-                { limit: 200000, rate: 0.225 },
-                { limit: 800000, rate: 0.25 }
-            ];
+<script>
+function calculate() {
+    const name = document.getElementById('empName').value;
+    const S7 = parseFloat(document.getElementById('gross').value); // Gross Salary
+    const AE7 = parseFloat(document.getElementById('currentDays').value); // Actual Days (Max 30)
+    
+    if(!name || isNaN(S7)) return alert("برجاء إدخال البيانات");
 
-            let remaining = taxableAnnual;
-            for (let slab of slabs) {
-                let currentChunk = Math.min(remaining, slab.limit);
-                tax += currentChunk * slab.rate;
-                remaining -= currentChunk;
-                if (remaining <= 0) break;
-            }
-            if (remaining > 0) tax += remaining * 0.275;
-            return tax;
+    // 1. Social Insurance (Employee Share)
+    const minIns = 2700;
+    const maxIns = 16700;
+    const insuranceSalary = Math.max(minIns, Math.min(S7, maxIns));
+    const employeeInsurance = Math.round(insuranceSalary * 0.11 * 100) / 100;
+
+    // 2. Martyrs Fund (0.05% of Gross)
+    const martyrsFund = Math.round(S7 * 0.0005 * 100) / 100;
+
+    // 3. Taxable Income (Applying Excel Formula logic)
+    // Formula: S7 - Insurance - Personal Exemption (20,000 annualized)
+    const personalExemptionAnnual = 20000;
+    const monthlyExemption = (personalExemptionAnnual / 360) * AE7;
+    let monthlyTaxable = S7 - employeeInsurance - monthlyExemption;
+    if(monthlyTaxable < 0) monthlyTaxable = 0;
+
+    // 4. Taxpool (Annualized) - Formula: (AH7 / AF7 * 360)
+    const annualTaxpool = Math.floor((monthlyTaxable / AE7 * 360) / 10) * 10;
+    
+    // 5. Brackets Logic (Law 7 of 2024)
+    let annualTax = 0;
+    const AI7 = annualTaxpool;
+
+    // Logic for Slab Shifting based on Income Category
+    if (AI7 <= 600000) {
+        let rem = AI7;
+        if(rem > 40000) {
+            let s2 = Math.min(rem - 40000, 15000); annualTax += s2 * 0.10; rem -= (s2 + 40000);
+            if(rem > 0) { let s3 = Math.min(rem, 15000); annualTax += s3 * 0.15; rem -= s3; }
+            if(rem > 0) { let s4 = Math.min(rem, 130000); annualTax += s4 * 0.20; rem -= s4; }
+            if(rem > 0) { let s5 = Math.min(rem, 200000); annualTax += s5 * 0.225; rem -= s5; }
+            if(rem > 0) { let s6 = Math.min(rem, 800000); annualTax += s6 * 0.25; rem -= s6; }
+            if(rem > 0) { annualTax += rem * 0.275; }
         }
+    } else if (AI7 > 600000 && AI7 <= 700000) {
+        annualTax = (55000 * 0.10) + (15000 * 0.15) + (130000 * 0.20) + (200000 * 0.225) + (Math.min(AI7 - 400000, 800000) * 0.25);
+    } else if (AI7 > 700000 && AI7 <= 800000) {
+        annualTax = (70000 * 0.15) + (130000 * 0.20) + (200000 * 0.225) + (Math.min(AI7 - 400000, 800000) * 0.25);
+    } // ... can be extended for all categories
 
-        function processPayroll() {
-            const name = document.getElementById('empName').value;
-            const gross = parseFloat(document.getElementById('grossSalary').value);
-            
-            if(!name || isNaN(gross)) return alert("يرجى إدخال بيانات صحيحة");
+    const monthlyTax = (annualTax / 360) * AE7;
 
-            // 1. حساب التأمينات (2026 Limits)
-            const maxInsuranceBase = 16700;
-            const insuranceBase = Math.min(gross, maxInsuranceBase);
-            const employeeInsurance = insuranceBase * 0.11;
+    // Final Net
+    const net = S7 - employeeInsurance - monthlyTax - martyrsFund;
 
-            // 2. حساب صندوق الشهداء (0.05% من الشامل)
-            const martyrsFund = gross * 0.0005;
-
-            // 3. حساب ضرائب الدخل (شهرياً)
-            // الإعفاء الشخصي للموظف 20,000 سنوياً
-            const annualPersonalExemption = 20000;
-            const taxableAnnual = Math.max(0, (gross - employeeInsurance) * 12 - annualPersonalExemption);
-            const monthlyTax = calculateTaxes(taxableAnnual) / 12;
-
-            // 4. الصافي النهائي
-            const netSalary = gross - employeeInsurance - monthlyTax - martyrsFund;
-
-            const row = `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-bold text-slate-700">${name}</td>
-                    <td class="p-4">${gross.toLocaleString()} ج.م</td>
-                    <td class="p-4 text-red-500">-${employeeInsurance.toFixed(2)}</td>
-                    <td class="p-4 text-red-400">-${martyrsFund.toFixed(2)}</td>
-                    <td class="p-4 text-red-500">-${monthlyTax.toFixed(2)}</td>
-                    <td class="p-4 font-extrabold text-green-700 text-lg">${netSalary.toLocaleString(undefined, {minimumFractionDigits: 2})} ج.م</td>
-                </tr>
-            `;
-            
-            document.getElementById('payrollBody').innerHTML += row;
-            // مسح الخانات بعد الإضافة
-            document.getElementById('empName').value = "";
-            document.getElementById('grossSalary').value = "";
-        }
-    </script>
+    // Rendering Result
+    const row = `<tr class="border-b hover:bg-gray-100">
+        <td class="p-3 border font-bold">${name}</td>
+        <td class="p-3 border">${S7.toLocaleString()}</td>
+        <td class="p-3 border text-red-600">${employeeInsurance.toFixed(2)}</td>
+        <td class="p-3 border text-blue-600">${annualTaxpool.toLocaleString()}</td>
+        <td class="p-3 border text-red-600">${martyrsFund.toFixed(2)}</td>
+        <td class="p-3 border text-red-600 font-bold">${monthlyTax.toFixed(2)}</td>
+        <td class="p-3 border font-extrabold text-green-700 bg-green-50">${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+    </tr>`;
+    
+    document.getElementById('resultsTable').innerHTML += row;
+}
+</script>
 </body>
 </html>
