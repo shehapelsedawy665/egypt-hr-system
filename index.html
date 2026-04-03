@@ -4,44 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Egyptian HR System - Precision Engine</title>
+    <title>Egyptian HR - Final Precision</title>
 </head>
-<body class="bg-slate-100 p-4 md:p-10 font-sans">
-    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-3xl p-6 border border-slate-200">
-        <h1 class="text-2xl font-black text-slate-800 mb-6 border-r-4 border-blue-600 pr-4">نظام الضرائب المعتمد (Excel Match)</h1>
+<body class="bg-slate-50 p-6 font-sans">
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6">
+        <h2 class="text-xl font-bold text-slate-800 mb-6 border-r-4 border-blue-600 pr-3">نظام الضرائب المعتمد (Excel Precise)</h2>
         
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-50 p-6 rounded-2xl">
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">الموظف</label>
-                <input id="empName" type="text" class="w-full border-2 border-slate-200 p-2 rounded-xl focus:border-blue-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">الراتب (S7)</label>
-                <input id="gross" type="number" class="w-full border-2 border-slate-200 p-2 rounded-xl focus:border-blue-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">أيام العمل (AE7)</label>
-                <input id="currentDays" type="number" value="30" class="w-full border-2 border-slate-200 p-2 rounded-xl focus:border-blue-500 outline-none">
-            </div>
-            <div class="flex items-end">
-                <button onclick="calculate()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-lg transition-all">إضافة +</button>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-100 p-4 rounded-xl">
+            <input id="empName" type="text" placeholder="الموظف" class="p-2 rounded border">
+            <input id="gross" type="number" placeholder="الراتب (S7)" class="p-2 rounded border">
+            <input id="currentDays" type="number" value="30" placeholder="أيام العمل" class="p-2 rounded border">
+            <button onclick="calculate()" class="bg-blue-600 text-white rounded font-bold hover:bg-blue-700">إضافة +</button>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-center">
+            <table class="w-full text-center border-collapse">
                 <thead>
-                    <tr class="bg-slate-800 text-white text-xs uppercase">
-                        <th class="p-4 rounded-tr-xl">الموظف</th>
-                        <th class="p-4">Taxable (AH7)</th>
-                        <th class="p-4 bg-yellow-600">Taxpool (AI7)</th>
-                        <th class="p-4">التأمينات</th>
-                        <th class="p-4">ضريبة الشهر</th>
-                        <th class="p-4">الصافي (Net)</th>
-                        <th class="p-4 rounded-tl-xl text-red-400">حذف</th>
+                    <tr class="bg-slate-800 text-white text-sm">
+                        <th class="p-3 border">الموظف</th>
+                        <th class="p-3 border italic">AH7 (Taxable)</th>
+                        <th class="p-3 border bg-orange-500 font-bold">AI7 (Taxpool)</th>
+                        <th class="p-3 border">التأمينات</th>
+                        <th class="p-3 border">ضريبة الشهر</th>
+                        <th class="p-3 border text-green-400">الصافي (Net)</th>
+                        <th class="p-3 border">حذف</th>
                     </tr>
                 </thead>
-                <tbody id="resultsTable" class="text-sm font-medium text-slate-700"></tbody>
+                <tbody id="resultsTable"></tbody>
             </table>
         </div>
     </div>
@@ -58,15 +47,17 @@ function calculate() {
     const insurance = Math.round(Math.min(S7, 16700) * 0.11 * 100) / 100;
 
     // 2. Monthly Taxable (AH7) = S7 - Insurance - (20000/360*AE7)
+    // 10000 - 1100 - (1666.66) = 7233.33
     const monthlyExemption = (20000 / 360) * AE7;
     const AH7 = S7 - insurance - monthlyExemption;
 
-    // 3. Taxpool (AI7) = FLOOR(AH7/AE7*360; 10)
-    // ده اللي كان فيه فرق الـ 10 جنيه - دلوقتي هيطلع 86790 بالظبط
+    // 3. Taxpool (AI7) = FLOOR(AH7 / AE7 * 360, 10)
+    // (7233.33 / 30 * 360) = 86799.999... 
+    // Math.floor(86799.99 / 10) * 10 = 86790
     const rawAnnual = (AH7 / AE7) * 360;
-    const AI7 = Math.floor(rawAnnual / 10) * 10;
+    const AI7 = Math.floor(Math.round(rawAnnual * 100) / 1000) * 10;
 
-    // 4. Tax Calculation (Simplified Law 7-2024 for testing)
+    // 4. Tax Engine (Slabs Law 7-2024)
     let annualTax = 0;
     if (AI7 <= 600000) {
         let rem = AI7;
@@ -74,27 +65,26 @@ function calculate() {
             let s2 = Math.min(rem - 40000, 15000); annualTax += s2 * 0.1; rem -= (s2 + 40000);
             if(rem > 0) { let s3 = Math.min(rem, 15000); annualTax += s3 * 0.15; rem -= s3; }
             if(rem > 0) { let s4 = Math.min(rem, 130000); annualTax += s4 * 0.2; rem -= s4; }
+            if(rem > 0) { let s5 = Math.min(rem, 200000); annualTax += s5 * 0.225; rem -= s5; }
         }
     }
     const monthlyTax = (annualTax / 360) * AE7;
-    const net = S7 - insurance - monthlyTax - (S7 * 0.0005);
+    const martyrs = S7 * 0.0005;
+    const net = S7 - insurance - monthlyTax - martyrs;
 
     const rowId = 'row-' + Date.now();
-    const row = `<tr id="${rowId}" class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-        <td class="p-4 font-bold text-slate-900">${name}</td>
-        <td class="p-4 text-slate-500">${AH7.toFixed(2)}</td>
-        <td class="p-4 font-bold text-blue-700 bg-blue-50">${AI7}</td>
-        <td class="p-4 text-red-500">-${insurance.toFixed(2)}</td>
-        <td class="p-4 text-red-600">-${monthlyTax.toFixed(2)}</td>
-        <td class="p-4 font-black text-green-700">${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td class="p-4">
-            <button onclick="document.getElementById('${rowId}').remove()" class="text-red-500 hover:text-red-700 text-xl">×</button>
-        </td>
-    </tr>`;
-    
-    document.getElementById('resultsTable').innerHTML += row;
-    document.getElementById('empName').value = "";
-    document.getElementById('gross').value = "";
+    document.getElementById('resultsTable').innerHTML += `
+        <tr id="${rowId}" class="border-b hover:bg-slate-50">
+            <td class="p-3 border font-bold">${name}</td>
+            <td class="p-3 border">${AH7.toFixed(2)}</td>
+            <td class="p-3 border font-bold text-blue-700 bg-orange-50">${AI7}</td>
+            <td class="p-3 border text-red-500">-${insurance.toFixed(2)}</td>
+            <td class="p-3 border text-red-600">-${monthlyTax.toFixed(2)}</td>
+            <td class="p-3 border font-black text-green-700">${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="p-3 border">
+                <button onclick="document.getElementById('${rowId}').remove()" class="text-red-500 font-bold">حذف</button>
+            </td>
+        </tr>`;
 }
 </script>
 </body>
