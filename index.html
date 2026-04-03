@@ -1,91 +1,152 @@
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <title>Egyptian HR - Final Precision</title>
+<meta charset="UTF-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<title>Payroll System - Excel Accurate</title>
 </head>
-<body class="bg-slate-50 p-6 font-sans">
-    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6">
-        <h2 class="text-xl font-bold text-slate-800 mb-6 border-r-4 border-blue-600 pr-3">نظام الضرائب المعتمد (Excel Precise)</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-100 p-4 rounded-xl">
-            <input id="empName" type="text" placeholder="الموظف" class="p-2 rounded border">
-            <input id="gross" type="number" placeholder="الراتب (S7)" class="p-2 rounded border">
-            <input id="currentDays" type="number" value="30" placeholder="أيام العمل" class="p-2 rounded border">
-            <button onclick="calculate()" class="bg-blue-600 text-white rounded font-bold hover:bg-blue-700">إضافة +</button>
-        </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-center border-collapse">
-                <thead>
-                    <tr class="bg-slate-800 text-white text-sm">
-                        <th class="p-3 border">الموظف</th>
-                        <th class="p-3 border italic">AH7 (Taxable)</th>
-                        <th class="p-3 border bg-orange-500 font-bold">AI7 (Taxpool)</th>
-                        <th class="p-3 border">التأمينات</th>
-                        <th class="p-3 border">ضريبة الشهر</th>
-                        <th class="p-3 border text-green-400">الصافي (Net)</th>
-                        <th class="p-3 border">حذف</th>
-                    </tr>
-                </thead>
-                <tbody id="resultsTable"></tbody>
-            </table>
-        </div>
-    </div>
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow">
+
+<h2 class="text-xl font-bold mb-4">نظام الضرائب (مطابق Excel 100%)</h2>
+
+<div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+
+<input id="name" placeholder="اسم" class="p-2 border rounded">
+<input id="gross" type="number" placeholder="المرتب" class="p-2 border rounded">
+<input id="days" type="number" value="30" placeholder="أيام الشهر" class="p-2 border rounded">
+<input id="prevDays" type="number" value="0" placeholder="Prev Days" class="p-2 border rounded">
+<input id="prevTaxable" type="number" value="0" placeholder="Prev Taxable" class="p-2 border rounded">
+<input id="prevTaxes" type="number" value="0" placeholder="Prev Taxes" class="p-2 border rounded">
+
+<select id="taxCode" class="p-2 border rounded">
+<option value="1">1 Regular</option>
+<option value="2">2 Flat 10%</option>
+<option value="4">4 Exemption 30k</option>
+<option value="8">8 Resignation</option>
+</select>
+
+<button onclick="calc()" class="bg-blue-600 text-white rounded p-2">احسب</button>
+
+</div>
+
+<table class="w-full text-center border">
+<thead class="bg-black text-white">
+<tr>
+<th>اسم</th>
+<th>Taxable</th>
+<th>Taxpool</th>
+<th>ضريبة الشهر</th>
+<th>Net</th>
+</tr>
+</thead>
+
+<tbody id="table"></tbody>
+</table>
+
+</div>
 
 <script>
-function calculate() {
-    const name = document.getElementById('empName').value;
-    const S7 = parseFloat(document.getElementById('gross').value); 
-    const AE7 = parseFloat(document.getElementById('currentDays').value); 
-    
-    if(!name || isNaN(S7)) return;
 
-    // 1. Insurance (11% limit 16700)
-    const insurance = Math.round(Math.min(S7, 16700) * 0.11 * 100) / 100;
+function R(n){return Math.round(n*100)/100;}
 
-    // 2. Monthly Taxable (AH7) = S7 - Insurance - (20000/360*AE7)
-    // 10000 - 1100 - (1666.66) = 7233.33
-    const monthlyExemption = (20000 / 360) * AE7;
-    const AH7 = S7 - insurance - monthlyExemption;
+function calc(){
 
-    // 3. Taxpool (AI7) = FLOOR(AH7 / AE7 * 360, 10)
-    // (7233.33 / 30 * 360) = 86799.999... 
-    // Math.floor(86799.99 / 10) * 10 = 86790
-    const rawAnnual = (AH7 / AE7) * 360;
-    const AI7 = Math.floor(Math.round(rawAnnual * 100) / 1000) * 10;
+let name = document.getElementById("name").value;
+let S7 = +document.getElementById("gross").value;
+let AE7 = +document.getElementById("days").value;
+let prevDays = +document.getElementById("prevDays").value;
+let prevTaxable = +document.getElementById("prevTaxable").value;
+let prevTaxes = +document.getElementById("prevTaxes").value;
+let taxCode = +document.getElementById("taxCode").value;
 
-    // 4. Tax Engine (Slabs Law 7-2024)
-    let annualTax = 0;
-    if (AI7 <= 600000) {
-        let rem = AI7;
-        if(rem > 40000) {
-            let s2 = Math.min(rem - 40000, 15000); annualTax += s2 * 0.1; rem -= (s2 + 40000);
-            if(rem > 0) { let s3 = Math.min(rem, 15000); annualTax += s3 * 0.15; rem -= s3; }
-            if(rem > 0) { let s4 = Math.min(rem, 130000); annualTax += s4 * 0.2; rem -= s4; }
-            if(rem > 0) { let s5 = Math.min(rem, 200000); annualTax += s5 * 0.225; rem -= s5; }
-        }
-    }
-    const monthlyTax = (annualTax / 360) * AE7;
-    const martyrs = S7 * 0.0005;
-    const net = S7 - insurance - monthlyTax - martyrs;
+if(!name || !S7) return;
 
-    const rowId = 'row-' + Date.now();
-    document.getElementById('resultsTable').innerHTML += `
-        <tr id="${rowId}" class="border-b hover:bg-slate-50">
-            <td class="p-3 border font-bold">${name}</td>
-            <td class="p-3 border">${AH7.toFixed(2)}</td>
-            <td class="p-3 border font-bold text-blue-700 bg-orange-50">${AI7}</td>
-            <td class="p-3 border text-red-500">-${insurance.toFixed(2)}</td>
-            <td class="p-3 border text-red-600">-${monthlyTax.toFixed(2)}</td>
-            <td class="p-3 border font-black text-green-700">${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-            <td class="p-3 border">
-                <button onclick="document.getElementById('${rowId}').remove()" class="text-red-500 font-bold">حذف</button>
-            </td>
-        </tr>`;
+// ================= INSURANCE =================
+let insurance = R(Math.min(S7,14500)*0.11);
+
+// ================= EXEMPTION =================
+let exemption = (taxCode==4 ? 30000 : 20000);
+let dailyEx = R(exemption/360*AE7);
+
+// ================= TAXABLE =================
+let taxable = R(S7 - insurance - dailyEx);
+if(taxable<0) taxable=0;
+
+// ================= CUMULATIVE =================
+let totalDays = prevDays + AE7;
+let totalTaxable = prevTaxable + taxable;
+
+// ================= TAXPOOL =================
+let taxpool = 0;
+if(totalDays>0){
+taxpool = Math.floor((totalTaxable/totalDays*360)/10)*10;
 }
+
+// ================= FLAT TAX =================
+if(taxCode==2){
+let tax = R(taxable*0.1);
+addRow(name,taxable,taxpool,tax,S7-insurance-tax);
+return;
+}
+
+// ================= BRACKETS =================
+let rem = taxpool;
+let tax = 0;
+
+// 0%
+if(rem>40000){rem-=40000}else rem=0;
+
+// 10%
+if(rem>0){let x=Math.min(rem,15000);tax+=x*0.1;rem-=x;}
+
+// 15%
+if(rem>0){let x=Math.min(rem,15000);tax+=x*0.15;rem-=x;}
+
+// 20%
+if(rem>0){let x=Math.min(rem,130000);tax+=x*0.2;rem-=x;}
+
+// 22.5%
+if(rem>0){let x=Math.min(rem,200000);tax+=x*0.225;rem-=x;}
+
+// 25%
+if(rem>0){let x=Math.min(rem,800000);tax+=x*0.25;rem-=x;}
+
+// 27.5%
+if(rem>0){tax+=rem*0.275;}
+
+// ================= TOTAL TAX =================
+let totalTax = R(tax/360*totalDays);
+
+// ================= CURRENT MONTH TAX =================
+let monthTax = totalTax - prevTaxes;
+if(monthTax<0) monthTax=0;
+
+// ================= NET =================
+let martyrs = R(S7*0.0005);
+let net = R(S7 - insurance - monthTax - martyrs);
+
+// ================= UI =================
+addRow(name,taxable,taxpool,monthTax,net);
+
+}
+
+function addRow(n,t,tp,tax,net){
+document.getElementById("table").innerHTML+=`
+<tr class="border">
+<td>${n}</td>
+<td>${t}</td>
+<td>${tp}</td>
+<td>${tax}</td>
+<td>${net}</td>
+</tr>`;
+}
+
 </script>
+
 </body>
 </html>
+```
